@@ -85,3 +85,29 @@ end;
 function normalizeZeroMean!(dataset::AbstractArray{<:Real,2})
     normalizeZeroMean!(dataset , calculateZeroMeanNormalizationParameters(dataset));
 end;
+
+
+function prepareDataForFitting(trainingDataset::Tuple{AbstractArray{<:Real,2}, AbstractArray{<:Any,1}},
+                                testDataset::Tuple{AbstractArray{<:Real,2}, AbstractArray{<:Any,1}},
+                                validationRatio::Float64 = 0.)
+    # split training into training and validation sets
+    if validationRatio > 0.0
+        indicesT, indicesV = holdOut(size(trainingDataset[1], 1), validationRatio)
+        (inputsAux, targetsAux) = trainingDataset;
+        validationDataset = inputsAux[indicesV,:], targetsAux[indicesV]
+        trainingDataset = inputsAux[indicesT,:], targetsAux[indicesT]
+
+        normParams = calculateMinMaxNormalizationParameters(trainingDataset[1])
+        normalizeMinMax!(validationDataset[1], normParams)
+    else
+        # empty validation set
+        validationDataset = (Array{Float64}(undef, 0, 0), Array{Any}(undef, 0))
+
+        normParams = calculateMinMaxNormalizationParameters(trainingDataset[1])
+    end;
+
+    normalizeMinMax!(trainingDataset[1], normParams)
+    normalizeMinMax!(testDataset[1], normParams)
+
+    return trainingDataset, validationDataset, testDataset
+end
