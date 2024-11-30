@@ -1,4 +1,52 @@
-# Holdout
+#################################
+# Data cleaning with DataFrames #
+#################################
+
+# Returns columns with more than 35% of the data missing
+function getMissingColumns(df::DataFrame, percentage::Float64)
+    summary = describe(df)
+    feats_out = summary[summary.nmissing .> floor(nrow(df)*percentage), "variable"]
+    return feats_out;
+end;
+
+# Function to OHE categorical features with a dataframe
+function dfOneHotEncoding!(df::DataFrame, feature::String, classes::AbstractArray{<:Any,1})
+    # First we are going to set a line as defensive to check values
+    @assert(all([in(value, classes) for value in df[:,feature]]));
+
+    # Second defensive statement, check the number of classes
+    numClasses = length(classes);
+    @assert(numClasses>1)
+    #Case with more than two clases
+    nrows = length(df[:,feature])
+    
+    for numClass = 1:numClasses
+        df[:, feature*"_"*classes[numClass]] .= (df[:,feature].==classes[numClass]) .* 1;
+    end;
+
+    df = select(df, Not(feature))
+
+    return df;
+end;
+
+#Equivalent to function dfOneHotEncoding(feature::AbstractArray{<:Any,1})
+dfOneHotEncoding!(df::DataFrame, feature::String) = dfOneHotEncoding!(df, feature, unique(df[:,feature]));
+
+# Function to map ordinal string features to int values given in a Dict.
+function dfOrdinalEncoding!(df::DataFrame, feature::String, ordDict::Dict{})
+
+    # Map values of dict, if not found returns missing
+    df[:,feature*"_ord"] = map(x -> get(ordDict, x, missing), df[:, feature])
+
+    df = select(df, Not(feature))
+
+    return df
+end;
+
+
+############
+# Holdout  #
+############
 
 using Random
 function holdOut(N::Int, P::Real)
@@ -22,7 +70,10 @@ function holdOut(N::Int, Pval::Real, Ptest::Real)
     return (trainI, valI, testI)
 end;
 
-# One-hot encoding
+####################
+# One-hot encoding #
+####################
+
 function oneHotEncoding(feature::AbstractArray{<:Any,1}, classes::AbstractArray{<:Any,1}=unique(feature))
     # First we are going to set a line as defensive to check values
     @assert(all([in(value, classes) for value in feature]));
@@ -44,7 +95,9 @@ function oneHotEncoding(feature::AbstractArray{<:Any,1}, classes::AbstractArray{
     return oneHot;
 end;
 
-# Normalization
+#################
+# Normalization #
+#################
 
 using Statistics;
 
