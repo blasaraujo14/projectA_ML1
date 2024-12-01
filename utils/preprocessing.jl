@@ -170,8 +170,7 @@ function prepareDataForFitting(trainingDataset::Tuple{AbstractArray{<:Real,2}, A
     reducer = SelectKBest(f_classif, k=10);
 
     #Once it is ajusted it can be used to transform the data
-    X_train = trainingDataset[1];
-    y_train = trainingDataset[2];
+    X_train, y_train = trainingDataset
 
     trainingDataset = (fit_transform!(reducer, X_train, y_train), y_train);
     testDataset = (reducer.transform(testDataset[1]), testDataset[2]);

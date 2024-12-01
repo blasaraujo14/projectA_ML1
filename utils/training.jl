@@ -28,7 +28,6 @@ function fitAndConfusion(modelType::Symbol, modelHyperparameters::Dict,
                         classes::AbstractArray{<:Any,1})
     
     if modelType == :ANN
-        
         targetsTrain = oneHotEncoding(targetsTrain, classes)
         targetsVal = oneHotEncoding(targetsVal, classes)
         targetsTest = oneHotEncoding(targetsTest, classes)
@@ -94,7 +93,7 @@ end;
 
 function trainClassEnsemble(estimators::AbstractArray{Symbol,1},
         modelsHyperParameters:: AbstractArray{Dict, 1},
-        trainingDataset::Tuple{AbstractArray{<:Real,2}, AbstractArray{Bool,2}},
+        trainingDataset::Tuple{AbstractArray{<:Real,2}, AbstractArray{<:Any,1}},
         kFoldIndices::     Array{Int64,1})
     (inputs, targets) = trainingDataset;
     classes = unique(targets)
@@ -114,25 +113,32 @@ function trainClassEnsemble(estimators::AbstractArray{Symbol,1},
         # normalization is applied
         trainingDataset, _, testDataset = prepareDataForFitting(trainingDataset, testDataset)
 
-        # each individual model is fitted
-        modelsEnsemble = []
-        for i = 1:length(estimators)
-            modelType = estimators[i]
-            modelHyperparameters = modelsHyperParameters[i]
-            
-            model = fitScikitModel(modelType, modelHyperparameters, trainingDataset);
-            
-            push!(modelsEnsemble, (string(modelType)*string(i), model))
-        end;
 
-        # the ensemble is built, trained and tested
-        ensemble = StackingClassifier(estimators=[(name,model) for (name, model) in modelsEnsemble],
-                    final_estimator = SVC(probability=true), n_jobs=-1)
-        fit!(ensemble, trainInputs, trainTargets)
+        ensemble = fitEnsemble(trainingDataset, estimators, modelsHyperParameters)
         outputsTest = predict(ensemble, testInputs);
 
         (accur, _, _, _, _, _, fScore) = confusionMatrix(outputsTest, testTargets; weighted=true)
         results[testGroup, :] = [accur, fScore]
     end;
     return mean(results, dims=1), std(results, dims=1)
+end;
+
+function fitEnsemble(trainingDataset, estimators, modelsHyperParameters)
+    # each individual model is fitted
+    modelsEnsemble = []
+    for i = 1:length(estimators)
+        modelType = estimators[i]
+        modelHyperparameters = modelsHyperParameters[i]
+
+        model = fitScikitModel(modelType, modelHyperparameters, trainingDataset);
+
+        push!(modelsEnsemble, (string(modelType)*string(i), model))
+    end;
+
+    # the ensemble is built, trained and tested
+    ensemble = StackingClassifier(estimators=[(name,model) for (name, model) in modelsEnsemble],
+                final_estimator = SVC(probability=true), n_jobs=-1)
+    fit!(ensemble, trainInputs, trainTargets)
+
+    return ensemble
 end;

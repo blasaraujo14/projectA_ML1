@@ -188,10 +188,10 @@ function confusionMatrix(outputs::AbstractArray{Bool,2}, targets::AbstractArray{
 end;
 
 function confusionMatrix(outputs::AbstractArray{<:Real,2}, targets::AbstractArray{Bool,2}; weighted::Bool=true)
-    numOutputs = size(outputs, 2);
+    numTargets = size(targets, 2);
     classifOuts = classifyOutputs(outputs)
 
-    if numOutputs==1
+    if numTargets==1
         return confusionMatrix(classifOuts[:,1], targets[:,1])
     else
         return confusionMatrix(classifOuts, targets; weighted)
@@ -199,6 +199,14 @@ function confusionMatrix(outputs::AbstractArray{<:Real,2}, targets::AbstractArra
 end;
 
 function confusionMatrix(outputs::AbstractArray{<:Any,1}, targets::AbstractArray{<:Any,1}; weighted::Bool=true)
+    encodedOuts, encodedTargets = oneHotEncoding(outputs, unique(targets)), oneHotEncoding(targets)
+    numTargets = size(encodedTargets, 2);
+
     @assert(all(x -> x in unique(targets), unique(outputs)));
-    return confusionMatrix(oneHotEncoding(outputs, unique(targets)), oneHotEncoding(targets); weighted)
+    if numTargets==1
+        return confusionMatrix(encodedOuts[:,1], encodedTargets[:,1])
+    else
+        return confusionMatrix(encodedOuts, encodedTargets; weighted)
+    end
 end
+
