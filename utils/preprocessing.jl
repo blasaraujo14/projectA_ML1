@@ -139,6 +139,10 @@ function normalizeZeroMean!(dataset::AbstractArray{<:Real,2})
     normalizeZeroMean!(dataset , calculateZeroMeanNormalizationParameters(dataset));
 end;
 
+using ScikitLearn;
+@sk_import feature_selection: SelectKBest; # Feature Selection
+@sk_import feature_selection: f_classif; # Used with SelectKBest
+
 function prepareDataForFitting(trainingDataset::Tuple{AbstractArray{<:Real,2}, AbstractArray{<:Any,1}},
                                 testDataset::Tuple{AbstractArray{<:Real,2}, AbstractArray{<:Any,1}},
                                 validationRatio::Float64 = 0.)
@@ -165,19 +169,12 @@ function prepareDataForFitting(trainingDataset::Tuple{AbstractArray{<:Real,2}, A
     # pca = PCA(0.85)
     selectK = SelectKBest(f_classif, k=10)
 
-    #Ajust the matrix acording to the train data
-    fit!(selectK, trainingDataset[1][:,1:32])
-
-    function replaceNumeric(selectK, dataset)
-       return (hcat(selectK.transform(dataset[1][:, 1:32]), dataset[1][:, 33:end]), dataset[2])
-    end;
-
     #Once it is ajusted it can be used to transform the data
-    trainingDataset = replaceNumeric(selectK, trainingDataset)
-    testDataset = replaceNumeric(selectK, testDataset)
+    trainingDataset = selectK.fit_transform!(selectK, trainingDataset)
+    testDataset = selectK.transform(selectK, testDataset)
 
     if validationRatio > 0.0
-        validationDataset = replaceNumeric(selectK, validationDataset)
+        validationDataset = selectK.transform(selectK, validationDataset);
     end;
 
     return trainingDataset, validationDataset, testDataset;
