@@ -139,10 +139,10 @@ function normalizeZeroMean!(dataset::AbstractArray{<:Real,2})
     normalizeZeroMean!(dataset , calculateZeroMeanNormalizationParameters(dataset));
 end;
 
-
 function prepareDataForFitting(trainingDataset::Tuple{AbstractArray{<:Real,2}, AbstractArray{<:Any,1}},
                                 testDataset::Tuple{AbstractArray{<:Real,2}, AbstractArray{<:Any,1}},
                                 validationRatio::Float64 = 0.)
+
     # split training into training and validation sets
     if validationRatio > 0.0
         indicesT, indicesV = holdOut(size(trainingDataset[1], 1), validationRatio)
@@ -150,17 +150,35 @@ function prepareDataForFitting(trainingDataset::Tuple{AbstractArray{<:Real,2}, A
         validationDataset = inputsAux[indicesV,:], targetsAux[indicesV]
         trainingDataset = inputsAux[indicesT,:], targetsAux[indicesT]
 
-        normParams = calculateMinMaxNormalizationParameters(trainingDataset[1])
-        normalizeMinMax!(validationDataset[1], normParams)
+        normParams = calculateZeroMeanNormalizationParameters(trainingDataset[1])
+        normalizeZeroMean!(validationDataset[1], normParams)
     else
         # empty validation set
         validationDataset = (Array{Float64}(undef, 0, 0), Array{Any}(undef, 0))
 
-        normParams = calculateMinMaxNormalizationParameters(trainingDataset[1])
+        normParams = calculateZeroMeanNormalizationParameters(trainingDataset[1])
     end;
 
-    normalizeMinMax!(trainingDataset[1], normParams)
-    normalizeMinMax!(testDataset[1], normParams)
+    normalizeZeroMean!(trainingDataset[1], normParams)
+    normalizeZeroMean!(testDataset[1], normParams)
 
-    return trainingDataset, validationDataset, testDataset
-end
+    # pca = PCA(0.85)
+    selectK = SelectKBest(f_classif, k=10)
+
+    #Ajust the matrix acording to the train data
+    fit!(selectK, trainingDataset[1][:,1:32])
+
+    function replaceNumeric(selectK, dataset)
+       return (hcat(selectK.transform(dataset[1][:, 1:32]), dataset[1][:, 33:end]), dataset[2])
+    end;
+
+    #Once it is ajusted it can be used to transform the data
+    trainingDataset = replaceNumeric(selectK, trainingDataset)
+    testDataset = replaceNumeric(selectK, testDataset)
+
+    if validationRatio > 0.0
+        validationDataset = replaceNumeric(selectK, validationDataset)
+    end;
+
+    return trainingDataset, validationDataset, testDataset;
+end;
