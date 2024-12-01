@@ -170,11 +170,11 @@ function prepareDataForFitting(trainingDataset::Tuple{AbstractArray{<:Real,2}, A
     selectK = SelectKBest(f_classif, k=10)
 
     #Once it is ajusted it can be used to transform the data
-    trainingDataset = fit_transform!(selectK, trainingDataset)
-    testDataset = selectK.transform(selectK, testDataset)
+    trainingDataset = fit_transform!(selectK, trainingDataset);
+    testDataset = selectK.transform(testDataset);
 
     if validationRatio > 0.0
-        validationDataset = selectK.transform(selectK, validationDataset);
+        validationDataset = selectK.transform(validationDataset);
     end;
 
     return trainingDataset, validationDataset, testDataset;
