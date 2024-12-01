@@ -10,6 +10,9 @@ using ScikitLearn;
 include("utils/visualizations.jl");
 include("utils/preprocessing.jl");
 
+# Set seed
+Random.seed!(123)
+
 #############
 # Load data #
 #############
@@ -30,7 +33,7 @@ println("Imputing missing data...");
 inputs = Array(support2[!,Not(target_cols)]);
 targets = convert(Array{Bool, 1}, Array(support2[!,:death]));
 
-imputer = KNNImputer(n_neighbors = 2);
+imputer = KNNImputer(n_neighbors = 5);
 inputs[:,1:32] = fit_transform!(imputer, inputs[:,1:32]);
 println("Done.");
 println();
