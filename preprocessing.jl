@@ -139,8 +139,9 @@ function normalizeZeroMean!(dataset::AbstractArray{<:Real,2})
     normalizeZeroMean!(dataset , calculateZeroMeanNormalizationParameters(dataset));
 end;
 
-
-function prepareDataForFitting(trainingDataset::Tuple{AbstractArray{<:Real,2}, AbstractArray{<:Any,1}},
+using ScikitLearn;
+@sk_import decomposition:PCA
+function    (trainingDataset::Tuple{AbstractArray{<:Real,2}, AbstractArray{<:Any,1}},
                                 testDataset::Tuple{AbstractArray{<:Real,2}, AbstractArray{<:Any,1}},
                                 validationRatio::Float64 = 0.)
     # split training into training and validation sets
@@ -161,6 +162,24 @@ function prepareDataForFitting(trainingDataset::Tuple{AbstractArray{<:Real,2}, A
 
     normalizeMinMax!(trainingDataset[1], normParams)
     normalizeMinMax!(testDataset[1], normParams)
+
+    pca = PCA(0.85)
+
+    #Ajust the matrix acording to the train data
+    fit!(pca, trainingDataset[1][:,1:32])
+
+    function replaceNumeric(pca, dataset)
+       return (hcat(pca.transform(dataset[1][:, 1:32]), dataset[1][:, 33:end]), dataset[2])
+    end;
+
+    #Once it is ajusted it can be used to transform the data
+    trainingDataset = replaceNumeric(pca, trainingDataset)
+    testDataset = replaceNumeric(pca, testDataset)
+
+    if validationRatio > 0.0
+        validationDataset = replaceNumeric(pca, validationDataset)
+    end
+
 
     return trainingDataset, validationDataset, testDataset
 end
