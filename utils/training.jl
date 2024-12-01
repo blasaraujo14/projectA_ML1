@@ -91,3 +91,48 @@ function modelCrossValidation(modelType::Symbol,
     
     return mean(results, dims=1), std(results, dims=1)
 end;
+
+function trainClassEnsemble(estimators::AbstractArray{Symbol,1},
+        modelsHyperParameters:: AbstractArray{Dict, 1},
+        trainingDataset::Tuple{AbstractArray{<:Real,2}, AbstractArray{Bool,2}},
+        kFoldIndices::     Array{Int64,1})
+    (inputs, targets) = trainingDataset;
+    classes = unique(targets)
+    
+    k = kFoldIndices[argmax(kFoldIndices)]
+    results = zeros(k, 2)
+    
+    for testGroup=1:k
+        # computing training and test sets
+        indicesTraining = findall(!=(testGroup), kFoldIndices)
+        indicesTest = findall(==(testGroup), kFoldIndices)
+        trainingDataset = inputs[indicesTraining,:], targets[indicesTraining]
+        testDataset = inputs[indicesTest,:], targets[indicesTest]
+        trainInputs, trainTargets = trainingDataset
+        testInputs, testTargets = testDataset
+
+        # normalization is applied
+        trainingDataset, _, testDataset = prepareDataForFitting(trainingDataset, testDataset)
+
+        # each individual model is fitted
+        modelsEnsemble = []
+        for i = 1:length(estimators)
+            modelType = estimators[i]
+            modelHyperparameters = modelsHyperParameters[i]
+            
+            model = fitScikitModel(modelType, modelHyperparameters, trainingDataset);
+            
+            push!(modelsEnsemble, (string(modelType)*string(i), model))
+        end;
+
+        # the ensemble is built, trained and tested
+        ensemble = StackingClassifier(estimators=[(name,model) for (name, model) in modelsEnsemble],
+                    final_estimator = SVC(probability=true), n_jobs=-1)
+        fit!(ensemble, trainInputs, trainTargets)
+        outputsTest = predict(ensemble, testInputs);
+
+        (accur, _, _, _, _, _, fScore) = confusionMatrix(outputsTest, testTargets; weighted=true)
+        results[testGroup, :] = [accur, fScore]
+    end;
+    return mean(results, dims=1), std(results, dims=1)
+end;

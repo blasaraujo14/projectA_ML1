@@ -1,6 +1,3 @@
-using Flux.Losses
-using Flux
-
 function buildClassANN(numInputs::Int, topology::AbstractArray{<:Int,1}, numOutputs::Int;
                     transferFunctions::AbstractArray{<:Function,1}=fill(σ, length(topology)))
     ann=Chain();
