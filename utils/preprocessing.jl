@@ -166,12 +166,12 @@ function prepareDataForFitting(trainingDataset::Tuple{AbstractArray{<:Real,2}, A
     normalizeZeroMean!(trainingDataset[1], normParams)
     normalizeZeroMean!(testDataset[1], normParams)
 
-    # pca = PCA(0.85)
-    selectK = SelectKBest(f_classif, k=10)
+    # reducer = PCA(0.85)
+    reducer = SelectKBest(f_classif, k=10);
 
     #Once it is ajusted it can be used to transform the data
-    trainingDataset = fit_transform!(selectK, trainingDataset);
-    testDataset = selectK.transform(testDataset);
+    trainingDataset = (fit_transform!(reducer, trainingDataset[1]), trainingDataset[2]);
+    testDataset = (reducer.transform(testDataset[1]), testDataset[2]);
 
     if validationRatio > 0.0
         validationDataset = selectK.transform(validationDataset);
