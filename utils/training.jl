@@ -1,3 +1,5 @@
+
+# Trains models using the julia wrapper for scikit-learn
 function fitScikitModel(modelType::Symbol, modelHyperparameters::Dict, 
                         (inputsTrain, targetsTrain)::Tuple{AbstractArray{<:Real,2}, AbstractArray{<:Any,1}})
     
@@ -21,6 +23,7 @@ function fitScikitModel(modelType::Symbol, modelHyperparameters::Dict,
     return model
 end
 
+# Trains a model and obtains its confusion matrix in test
 function fitAndConfusion(modelType::Symbol, modelHyperparameters::Dict, 
                         (inputsTrain, targetsTrain)::Tuple{AbstractArray{<:Real,2}, AbstractArray{<:Any,1}},
                         (inputsVal, targetsVal)::Tuple{AbstractArray{<:Real,2}, AbstractArray{<:Any,1}},
@@ -48,6 +51,7 @@ function fitAndConfusion(modelType::Symbol, modelHyperparameters::Dict,
     return confusionMatrix(outputsTest, targetsTest; weighted=true)
 end
 
+# Applies model cross validation to a given model
 function modelCrossValidation(modelType::Symbol,
         modelHyperparameters::Dict,
         inputs::AbstractArray{<:Real,2},
@@ -91,6 +95,7 @@ function modelCrossValidation(modelType::Symbol,
     return mean(results, dims=1), std(results, dims=1)
 end;
 
+# Applies cross validation to an ensemble model
 function trainClassEnsemble(estimators::AbstractArray{Symbol,1},
         modelsHyperParameters:: AbstractArray{Dict, 1},
         trainingDataset::Tuple{AbstractArray{<:Real,2}, AbstractArray{<:Any,1}},
@@ -123,6 +128,7 @@ function trainClassEnsemble(estimators::AbstractArray{Symbol,1},
     return mean(results, dims=1), std(results, dims=1)
 end;
 
+# Trains an ensemble model
 function fitEnsemble(trainingDataset, estimators, modelsHyperParameters)
     # each individual model is fitted
     modelsEnsemble = []
@@ -142,4 +148,41 @@ function fitEnsemble(trainingDataset, estimators, modelsHyperParameters)
     fit!(ensemble, trainInputs, trainTargets)
 
     return ensemble
+end;
+
+# Function to print better the results of cross validation
+function printCrossValOutput(((accur, fScore), (stdAccur, stdFScore)))
+    accPerc, fScorePerc =  @sprintf("%.2f%%", accur * 100), @sprintf("%.2f%%", fScore * 100);
+    accStdPerc, fScoreStdPerc =  @sprintf("%.2f%%", stdAccur * 100), @sprintf("%.2f%%", stdFScore * 100);
+    println("Accuracy:", accur, " (", accPerc, "), stdDev:", stdAccur, " (", accStdPerc, ")");
+    println("F1-Score:", fScore, " (", fScorePerc, "), stdDev:", stdFScore, " (", fScoreStdPerc, ")");
+    println();
+
+    return accur, fScore
+end;
+
+# Applies crosvalidation for given models and return best configuration
+function findBestModel(models, trainInputs, trainTargets, kFoldIndices)
+    bestMetricYet = 0;
+    bestModel = -1;
+    
+    for (modelType, paramList) in models
+        cnt = 1;
+        println();
+        println("Training ", modelType, " models:");
+        for params in paramList
+            println("Configuration ", cnt, ": ", params);
+            accur, fScore = printCrossValOutput(modelCrossValidation(modelType, params, trainInputs,
+                                                                          trainTargets, kFoldIndices));
+            
+            cnt += 1;
+            #println(modelType, (accur, fScore), (stdAccur, stdFScore))
+            if accur * fScore > bestMetricYet
+                bestMetricYet = accur * fScore;
+                bestModel = (modelType, params);
+            end;
+        end;
+    end;
+    
+    return bestModel
 end;

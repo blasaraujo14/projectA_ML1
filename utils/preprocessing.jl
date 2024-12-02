@@ -47,8 +47,6 @@ end;
 ############
 # Holdout  #
 ############
-
-using Random
 function holdOut(N::Int, P::Real)
     v = randperm(N)
     ind = round(Int, N*(1-P))
@@ -73,7 +71,6 @@ end;
 ####################
 # One-hot encoding #
 ####################
-
 function oneHotEncoding(feature::AbstractArray{<:Any,1}, classes::AbstractArray{<:Any,1}=unique(feature))
     # First we are going to set a line as defensive to check values
     @assert(all([in(value, classes) for value in feature]));
@@ -98,9 +95,6 @@ end;
 #################
 # Normalization #
 #################
-
-using Statistics;
-
 function calculateMinMaxNormalizationParameters(dataset::AbstractArray{<:Real,2})
     return minimum(dataset, dims=1), maximum(dataset, dims=1)
 end;
@@ -139,10 +133,7 @@ function normalizeZeroMean!(dataset::AbstractArray{<:Real,2})
     normalizeZeroMean!(dataset , calculateZeroMeanNormalizationParameters(dataset));
 end;
 
-using ScikitLearn;
-@sk_import feature_selection: SelectKBest; # Feature Selection
-@sk_import feature_selection: f_classif; # Used with SelectKBest
-
+# Normalize data for training and applies selectkbest feature selection
 function prepareDataForFitting(trainingDataset::Tuple{AbstractArray{<:Real,2}, AbstractArray{<:Any,1}},
                                 testDataset::Tuple{AbstractArray{<:Real,2}, AbstractArray{<:Any,1}},
                                 validationRatio::Float64 = 0.)
