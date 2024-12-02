@@ -28,9 +28,6 @@ include("utils/visualizations.jl"); # for plots
 # Set seed
 Random.seed!(10);
 
-# Approach selected by terminal
-approach = ARGS[1];
-
 #############
 # Load data #
 #############
@@ -51,15 +48,8 @@ trainIndex, testIndex = holdOut(nrow(support2), 0.2);
 trainInputs = Array(support2[trainIndex, Not(target_cols)]);
 testInputs = Array(support2[testIndex, Not(target_cols)]);
 
-# Targets depend on the approach selected
-if approach == "binary"
-    trainTargets = Array(support2[trainIndex, "death"]);
-    testTargets = Array(support2[testIndex, "death"]);
-
-else
-    trainTargets = Array(support2[trainIndex, "fate"]);
-    testTargets = Array(support2[testIndex, "fate"]);
-end;
+trainTargets = Array(support2[trainIndex, "fate"]);
+testTargets = Array(support2[testIndex, "fate"]);
 
 # Imputation of missing data
 imputer = KNNImputer(n_neighbors = 5);
@@ -85,11 +75,7 @@ pca = PCA(2);
 pcaInputs = fit_transform!(pca, numInputs);
 draw_results(pcaInputs, trainTargets; colors=[:green,:red], target_names=["Survived", "Died"]);
 
-if approach == "binary"
-    savefig("plots/pcaBinary.png");
-else
-    savefig("plots/pcaMulti.png");
-end;
+savefig("plots/pcaCategorical.png");
 println("Done");
 
 ####################
@@ -143,7 +129,7 @@ SVMparams = [Dict("kernel" => "linear", "degree" => 0, "gamma" => "scale", "C" =
 
 models = [(:SVM, SVMparams)];
 
-(modelType, params) = findBestModel(models, trainInputs, trainTargets, kFoldIndices);
+(modelType, params) = findBestModel(models, trainInputs, trainTargets, kFoldIndices; reduceDimensions=true);
 println("Best model is ", modelType, " with hyperparameters:");
 println(params);
 
@@ -155,7 +141,7 @@ DTreeParams = [Dict("maxDepth" => 4), Dict("maxDepth" => 8), Dict("maxDepth" => 
 
 models = [(:DTree, DTreeParams)];
 
-(modelType, params) = findBestModel(models, trainInputs, trainTargets, kFoldIndices);
+(modelType, params) = findBestModel(models, trainInputs, trainTargets, kFoldIndices; reduceDimensions=true);
 println("Best model is ", modelType, " with hyperparameters:");
 println(params);
 
@@ -168,7 +154,7 @@ KNNparams = [Dict("k" => 3), Dict("k" => 6), Dict("k" => 12),
 
 models = [(:KNN, KNNparams)];
 
-(modelType, params) = findBestModel(models, trainInputs, trainTargets, kFoldIndices);
+(modelType, params) = findBestModel(models, trainInputs, trainTargets, kFoldIndices; reduceDimensions=true);
 println("Best model is ", modelType, " with hyperparameters:");
 
 println(params);
@@ -189,7 +175,7 @@ SVMparams = Dict("C" => 1, "kernel" => "rbf", "gamma" => "scale", "degree" => 0)
 params = Vector{Dict}([KNNparams, DTreeParams, SVMparams])
 
 printCrossValOutput(trainClassEnsemble(estimators, params, (trainInputs, trainTargets),
-                   crossvalidation(trainTargets, 5)));
+                   crossvalidation(trainTargets, 5)); reduceDimensions=true);
 
 
 ################
@@ -201,7 +187,7 @@ println("Saving confusion matrix of best model");
 # train best model with all paterns and build confusion matrix with all patterns
 train = (trainInputs, trainTargets); test = (testInputs, testTargets);
 # standardization is applied
-trainNorm, _, testNorm = prepareDataForFitting(train, test);
+trainNorm, _, testNorm = prepareDataForFitting(train, test; reduceDimensions=true);
 ensemble = fitEnsemble(trainNorm, estimators, params);
 classes = unique(trainTargets);
 
@@ -209,17 +195,11 @@ matAndMetrics = confusionMatrix(predict(ensemble, testNorm[1]), testNorm[2]; wei
 confMat = matAndMetrics[8];
 
 # Plot confusion matrix and save it.
-if approach == "binary"
-    class_map = Dict(0 => "Recovery", 1 => "Death");
-    classNames = [class_map[class] for class in classes];
-    displayConfMat(confMat, classNames);
-    savefig("plots/confusionMatrixBinary.png");
-else
-    class_map = Dict(0 => "Recovery", 1 => "HomeDeath", 2 => "HospitalDeath")
-    classNames = [class_map[class] for class in classes];
-    displayConfMat(confMat, classNames);
-    savefig("plots/confusionMatrixMulti.png");
-end;
+
+class_map = Dict(0 => "Recovery", 1 => "HomeDeath", 2 => "HospitalDeath")
+classNames = [class_map[class] for class in classes];
+displayConfMat(confMat, classNames);
+savefig("plots/confusionMatrixCategorical.png");
 
 println("Done");
 
