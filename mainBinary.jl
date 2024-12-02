@@ -28,9 +28,6 @@ include("utils/visualizations.jl"); # for plots
 # Set seed
 Random.seed!(10);
 
-# Approach selected by terminal
-approach = ARGS[1];
-
 #############
 # Load data #
 #############
@@ -52,14 +49,8 @@ trainInputs = Array(support2[trainIndex, Not(target_cols)]);
 testInputs = Array(support2[testIndex, Not(target_cols)]);
 
 # Targets depend on the approach selected
-if approach == "binary"
-    trainTargets = Array(support2[trainIndex, "death"]);
-    testTargets = Array(support2[testIndex, "death"]);
-
-else
-    trainTargets = Array(support2[trainIndex, "fate"]);
-    testTargets = Array(support2[testIndex, "fate"]);
-end;
+trainTargets = Array(support2[trainIndex, "death"]);
+testTargets = Array(support2[testIndex, "death"]);
 
 # Imputation of missing data
 imputer = KNNImputer(n_neighbors = 5);
@@ -85,11 +76,7 @@ pca = PCA(2);
 pcaInputs = fit_transform!(pca, numInputs);
 draw_results(pcaInputs, trainTargets; colors=[:green,:red], target_names=["Survived", "Died"]);
 
-if approach == "binary"
-    savefig("plots/pcaBinary.png");
-else
-    savefig("plots/pcaMulti.png");
-end;
+savefig("plots/pcaBinary.png");
 println("Done");
 
 ####################
@@ -209,17 +196,11 @@ matAndMetrics = confusionMatrix(predict(ensemble, testNorm[1]), testNorm[2]; wei
 confMat = matAndMetrics[8];
 
 # Plot confusion matrix and save it.
-if approach == "binary"
-    class_map = Dict(0 => "Recovery", 1 => "Death");
-    classNames = [class_map[class] for class in classes];
-    displayConfMat(confMat, classNames);
-    savefig("plots/confusionMatrixBinary.png");
-else
-    class_map = Dict(0 => "Recovery", 1 => "HomeDeath", 2 => "HospitalDeath")
-    classNames = [class_map[class] for class in classes];
-    displayConfMat(confMat, classNames);
-    savefig("plots/confusionMatrixMulti.png");
-end;
+
+class_map = Dict(0 => "Recovery", 1 => "Death");
+classNames = [class_map[class] for class in classes];
+displayConfMat(confMat, classNames);
+savefig("plots/confusionMatrixBinary.png");
 
 println("Done");
 
