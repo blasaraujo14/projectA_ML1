@@ -136,7 +136,8 @@ end;
 # Normalize data for training and applies selectkbest feature selection
 function prepareDataForFitting(trainingDataset::Tuple{AbstractArray{<:Real,2}, AbstractArray{<:Any,1}},
                                 testDataset::Tuple{AbstractArray{<:Real,2}, AbstractArray{<:Any,1}},
-                                validationRatio::Float64 = 0.)
+                                validationRatio::Float64 = 0.;
+                                reduceDimensions::Bool = false)
 
     # split training into training and validation sets
     if validationRatio > 0.0
@@ -157,17 +158,19 @@ function prepareDataForFitting(trainingDataset::Tuple{AbstractArray{<:Real,2}, A
     normalizeZeroMean!(trainingDataset[1], normParams)
     normalizeZeroMean!(testDataset[1], normParams)
 
-    # reducer = PCA(0.85)
-    reducer = SelectKBest(f_classif, k=10);
+    if reduceDimensions
+        # reducer = PCA(0.85)
+        reducer = SelectKBest(f_classif, k=10);
 
-    #Once it is ajusted it can be used to transform the data
-    X_train, y_train = trainingDataset
+        #Once it is ajusted it can be used to transform the data
+        X_train, y_train = trainingDataset
 
-    trainingDataset = (fit_transform!(reducer, X_train, y_train), y_train);
-    testDataset = (reducer.transform(testDataset[1]), testDataset[2]);
+        trainingDataset = (fit_transform!(reducer, X_train, y_train), y_train);
+        testDataset = (reducer.transform(testDataset[1]), testDataset[2]);
 
-    if validationRatio > 0.0
-        validationDataset = (reducer.transform(validationDataset[1]), validationDataset[2]);
+        if validationRatio > 0.0
+            validationDataset = (reducer.transform(validationDataset[1]), validationDataset[2]);
+        end;
     end;
 
     return trainingDataset, validationDataset, testDataset;

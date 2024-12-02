@@ -56,7 +56,8 @@ function modelCrossValidation(modelType::Symbol,
         modelHyperparameters::Dict,
         inputs::AbstractArray{<:Real,2},
         targets::AbstractArray{<:Any,1},
-        crossValidationIndices::Array{Int64,1})
+        crossValidationIndices::Array{Int64,1};
+        reduceDimensions::Bool = false)
     classes = unique(targets)
     trainingDataset = (inputs, targets);
     repetitionsTraining = 1
@@ -81,7 +82,7 @@ function modelCrossValidation(modelType::Symbol,
 
         # standardization and validation set computation if needed
         valRatio = if modelType != :ANN 0. else modelHyperparameters["validationRatio"] end
-        trainingDataset, validationDataset, testDataset = prepareDataForFitting(trainingDataset, testDataset, valRatio)
+        trainingDataset, validationDataset, testDataset = prepareDataForFitting(trainingDataset, testDataset, valRatio; reduceDimensions=reduceDimensions)
         
         for _ = 1:repetitionsTraining
             (accur, _, _, _, _, _, fScore) = fitAndConfusion(modelType, modelHyperparameters, 
@@ -99,7 +100,8 @@ end;
 function trainClassEnsemble(estimators::AbstractArray{Symbol,1},
         modelsHyperParameters:: AbstractArray{Dict, 1},
         trainingDataset::Tuple{AbstractArray{<:Real,2}, AbstractArray{<:Any,1}},
-        kFoldIndices::     Array{Int64,1})
+        kFoldIndices::     Array{Int64,1};
+        reduceDimensions::Bool = false)
     (inputs, targets) = trainingDataset;
     classes = unique(targets)
     
@@ -114,7 +116,7 @@ function trainClassEnsemble(estimators::AbstractArray{Symbol,1},
         testDataset = inputs[indicesTest,:], targets[indicesTest]
 
         # standardization is applied
-        trainingDataset, _, testDataset = prepareDataForFitting(trainingDataset, testDataset)
+        trainingDataset, _, testDataset = prepareDataForFitting(trainingDataset, testDataset; reduceDimensions=reduceDimensions)
 
         trainInputs, trainTargets = trainingDataset
         testInputs, testTargets = testDataset
@@ -162,7 +164,7 @@ function printCrossValOutput(((accur, fScore), (stdAccur, stdFScore)))
 end;
 
 # Applies crosvalidation for given models and return best configuration
-function findBestModel(models, trainInputs, trainTargets, kFoldIndices)
+function findBestModel(models, trainInputs, trainTargets, kFoldIndices; reduceDimensions::Bool = false)
     bestMetricYet = 0;
     bestModel = -1;
     
@@ -173,7 +175,7 @@ function findBestModel(models, trainInputs, trainTargets, kFoldIndices)
         for params in paramList
             println("Configuration ", cnt, ": ", params);
             accur, fScore = printCrossValOutput(modelCrossValidation(modelType, params, trainInputs,
-                                                                          trainTargets, kFoldIndices));
+                                        trainTargets, kFoldIndices; reduceDimensions=reduceDimensions));
             
             cnt += 1;
             #println(modelType, (accur, fScore), (stdAccur, stdFScore))
