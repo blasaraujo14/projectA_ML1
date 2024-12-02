@@ -75,7 +75,7 @@ function modelCrossValidation(modelType::Symbol,
         trainingDataset = inputs[indicesTraining,:], targets[indicesTraining]
         testDataset = inputs[indicesTest,:], targets[indicesTest]
 
-        # normalization and validation set computation if needed
+        # standardization and validation set computation if needed
         valRatio = if modelType != :ANN 0. else modelHyperparameters["validationRatio"] end
         trainingDataset, validationDataset, testDataset = prepareDataForFitting(trainingDataset, testDataset, valRatio)
         
@@ -107,12 +107,12 @@ function trainClassEnsemble(estimators::AbstractArray{Symbol,1},
         indicesTest = findall(==(testGroup), kFoldIndices)
         trainingDataset = inputs[indicesTraining,:], targets[indicesTraining]
         testDataset = inputs[indicesTest,:], targets[indicesTest]
-        trainInputs, trainTargets = trainingDataset
-        testInputs, testTargets = testDataset
 
-        # normalization is applied
+        # standardization is applied
         trainingDataset, _, testDataset = prepareDataForFitting(trainingDataset, testDataset)
 
+        trainInputs, trainTargets = trainingDataset
+        testInputs, testTargets = testDataset
 
         ensemble = fitEnsemble(trainingDataset, estimators, modelsHyperParameters)
         outputsTest = predict(ensemble, testInputs);
@@ -135,6 +135,7 @@ function fitEnsemble(trainingDataset, estimators, modelsHyperParameters)
         push!(modelsEnsemble, (string(modelType)*string(i), model))
     end;
 
+    trainInputs, trainTargets = trainingDataset
     # the ensemble is built, trained and tested
     ensemble = StackingClassifier(estimators=[(name,model) for (name, model) in modelsEnsemble],
                 final_estimator = SVC(probability=true), n_jobs=-1)
