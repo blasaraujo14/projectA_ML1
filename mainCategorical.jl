@@ -110,7 +110,7 @@ ANNparams = [Dict("topology" => [2], "maxEpochs" => 500, "minLoss" => 0., "learn
 
 models = [(:ANN, ANNparams)];
 
-(modelType, params) = findBestModel(models, trainInputs, trainTargets, kFoldIndices);
+(modelType, params) = findBestModel(models, trainInputs, trainTargets, kFoldIndices; reduceDimensions=false);
 println("Best model is ", modelType, " with hyperparameters:");
 println(params);
 
@@ -129,7 +129,7 @@ SVMparams = [Dict("kernel" => "linear", "degree" => 0, "gamma" => "scale", "C" =
 
 models = [(:SVM, SVMparams)];
 
-(modelType, params) = findBestModel(models, trainInputs, trainTargets, kFoldIndices);
+(modelType, params) = findBestModel(models, trainInputs, trainTargets, kFoldIndices; reduceDimensions=false);
 println("Best model is ", modelType, " with hyperparameters:");
 println(params);
 
@@ -141,7 +141,7 @@ DTreeParams = [Dict("maxDepth" => 4), Dict("maxDepth" => 8), Dict("maxDepth" => 
 
 models = [(:DTree, DTreeParams)];
 
-(modelType, params) = findBestModel(models, trainInputs, trainTargets, kFoldIndices);
+(modelType, params) = findBestModel(models, trainInputs, trainTargets, kFoldIndices; reduceDimensions=false);
 println("Best model is ", modelType, " with hyperparameters:");
 println(params);
 
@@ -154,7 +154,7 @@ KNNparams = [Dict("k" => 3), Dict("k" => 6), Dict("k" => 12),
 
 models = [(:KNN, KNNparams)];
 
-(modelType, params) = findBestModel(models, trainInputs, trainTargets, kFoldIndices);
+(modelType, params) = findBestModel(models, trainInputs, trainTargets, kFoldIndices; reduceDimensions=false);
 println("Best model is ", modelType, " with hyperparameters:");
 
 println(params);
@@ -175,7 +175,7 @@ SVMparams = Dict("C" => 1, "kernel" => "rbf", "gamma" => "scale", "degree" => 0)
 params = Vector{Dict}([KNNparams, DTreeParams, SVMparams])
 
 printCrossValOutput(trainClassEnsemble(estimators, params, (trainInputs, trainTargets),
-                   crossvalidation(trainTargets, 5)));
+                   crossvalidation(trainTargets, 5)); reduceDimensions=false);
 
 
 ################
@@ -187,7 +187,7 @@ println("Saving confusion matrix of best model");
 # train best model with all paterns and build confusion matrix with all patterns
 train = (trainInputs, trainTargets); test = (testInputs, testTargets);
 # standardization is applied
-trainNorm, _, testNorm = prepareDataForFitting(train, test);
+trainNorm, _, testNorm = prepareDataForFitting(train, test; reduceDimensions=false);
 ensemble = fitEnsemble(trainNorm, estimators, params);
 classes = unique(trainTargets);
 
