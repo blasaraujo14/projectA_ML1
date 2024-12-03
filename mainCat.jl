@@ -60,23 +60,24 @@ testInputs[:,1:32] = imputer.transform(testInputs[:,1:32]);
 # Visualizations #
 ##################
 
+approachName = "categorical"
 # ----------------------
 # Correlations
 # ----------------------
 meanTrain, stdTrain = calculateZeroMeanNormalizationParameters(trainInputs[:,1:32]);
 numInputs = normalizeZeroMean!(trainInputs[:,1:32], (meanTrain, stdTrain));
 plot_correlations(numInputs);
-savefig("plots/correlations.png");
+savefig("plots/" * approachName * "/correlations.png");
 
 # ----------------------
 # PCA
 # ----------------------
 pca = PCA(2);
 pcaInputs = fit_transform!(pca, numInputs);
-draw_results(pcaInputs, trainTargets; colors=[:green,:red,:blue],
+draw_results(pcaInputs, oneHotEncoding(trainTargets); colors=[:green,:red,:blue],
  target_names=["Died", "Survived", "Died at hospital"]);
 
-savefig("plots/pcaCategorical.png");
+savefig("plots/" * approachName * "/pcaVisualization.png");
 println("Done");
 
 ####################
@@ -92,29 +93,30 @@ kFoldIndices = crossvalidation(trainTargets, 5);
 # ----------------------
 # ANN
 # ----------------------
-ANNparams = [Dict("topology" => [2], "maxEpochs" => 500, "minLoss" => 0., "learningRate" => 0.01, 
+ANNparams = [Dict("topology" => [2], "maxEpochs" => 500, "minLoss" => 0., "learningRate" => 0.01,
                 "maxEpochsVal" => 20, "validationRatio" => 0.1),
-            Dict("topology" => [4], "maxEpochs" => 500, "minLoss" => 0., "learningRate" => 0.01, 
+            Dict("topology" => [4], "maxEpochs" => 500, "minLoss" => 0., "learningRate" => 0.01,
                 "maxEpochsVal" => 20, "validationRatio" => 0.1),
-            Dict("topology" => [8], "maxEpochs" => 500, "minLoss" => 0., "learningRate" => 0.01, 
+            Dict("topology" => [8], "maxEpochs" => 500, "minLoss" => 0., "learningRate" => 0.01,
                 "maxEpochsVal" => 20, "validationRatio" => 0.1),
-            Dict("topology" => [16], "maxEpochs" => 500, "minLoss" => 0., "learningRate" => 0.01, 
+            Dict("topology" => [16], "maxEpochs" => 500, "minLoss" => 0., "learningRate" => 0.01,
                 "maxEpochsVal" => 20, "validationRatio" => 0.1),
-            Dict("topology" => [2, 2], "maxEpochs" => 500, "minLoss" => 0., "learningRate" => 0.01, 
+            Dict("topology" => [2, 2], "maxEpochs" => 500, "minLoss" => 0., "learningRate" => 0.01,
                 "maxEpochsVal" => 20, "validationRatio" => 0.1),
-            Dict("topology" => [4, 4], "maxEpochs" => 500, "minLoss" => 0., "learningRate" => 0.01, 
+            Dict("topology" => [4, 4], "maxEpochs" => 500, "minLoss" => 0., "learningRate" => 0.01,
                 "maxEpochsVal" => 20, "validationRatio" => 0.1),
-            Dict("topology" => [8, 8], "maxEpochs" => 500, "minLoss" => 0., "learningRate" => 0.01, 
+            Dict("topology" => [8, 8], "maxEpochs" => 500, "minLoss" => 0., "learningRate" => 0.01,
                 "maxEpochsVal" => 20, "validationRatio" => 0.1),
-            Dict("topology" => [16, 16], "maxEpochs" => 500, "minLoss" => 0., "learningRate" => 0.01, 
+            Dict("topology" => [16, 16], "maxEpochs" => 500, "minLoss" => 0., "learningRate" => 0.01,
                 "maxEpochsVal" => 20, "validationRatio" => 0.1)]
 
 models = [(:ANN, ANNparams)];
 
-(modelType, params) = findBestModel(models, trainInputs, trainTargets, kFoldIndices; reduceDimensions=false);
+(modelType, params) = findBestModel(models, trainInputs, trainTargets, kFoldIndices; reduceDimensions=true);
 println("Best model is ", modelType, " with hyperparameters:");
 println(params);
 
+bestANNparams = params
 
 # ----------------------
 # SVM
@@ -134,6 +136,8 @@ models = [(:SVM, SVMparams)];
 println("Best model is ", modelType, " with hyperparameters:");
 println(params);
 
+bestSVMparams = params
+
 # ----------------------
 # DTree
 # ----------------------
@@ -146,6 +150,7 @@ models = [(:DTree, DTreeParams)];
 println("Best model is ", modelType, " with hyperparameters:");
 println(params);
 
+bestDTreeParams = params
 
 # ----------------------
 # KNN
@@ -157,9 +162,9 @@ models = [(:KNN, KNNparams)];
 
 (modelType, params) = findBestModel(models, trainInputs, trainTargets, kFoldIndices; reduceDimensions=false);
 println("Best model is ", modelType, " with hyperparameters:");
-
 println(params);
 
+bestKNNparams = params
 
 # ----------------------
 # Ensemble
@@ -167,25 +172,27 @@ println(params);
 
 # An ANN flux model cannot be included in a Scikit ensemble due to PyCall wrapping issues
 estimators = [:KNN, :DTree, :SVM]
-params = []
-DTreeParams = Dict("maxDepth" => 4)
-KNNparams = Dict("k" => 24)
-SVMparams = Dict("C" => 1, "kernel" => "rbf", "gamma" => "scale", "degree" => 0)
 
+#=
+bestDTreeParams = Dict("maxDepth" => 4)
+bestKNNparams = Dict("k" => 24)
+bestSVMparams = Dict("C" => 1, "kernel" => "rbf", "gamma" => "scale", "degree" => 0)
+=#
 
-params = Vector{Dict}([KNNparams, DTreeParams, SVMparams])
+params = Vector{Dict}([bestKNNparams, bestDTreeParams, bestSVMparams])
 
+println("Training ensemble consisting of best performing models:")
 printCrossValOutput(trainClassEnsemble(estimators, params, (trainInputs, trainTargets),
-                   crossvalidation(trainTargets, 5)); reduceDimensions=false);
+                   crossvalidation(trainTargets, 5); reduceDimensions=false));
 
 
 ################
 # Test results #
 ################
 println();
-println("Saving confusion matrix of best model");
+println("Saving confusion matrix of best models and ensemble");
 
-# train best model with all paterns and build confusion matrix with all patterns
+# Ensemble of best models
 train = (trainInputs, trainTargets); test = (testInputs, testTargets);
 # standardization is applied
 trainNorm, _, testNorm = prepareDataForFitting(train, test; reduceDimensions=false);
@@ -200,7 +207,30 @@ confMat = matAndMetrics[8];
 class_map = Dict(0 => "Recovery", 1 => "HomeDeath", 2 => "HospitalDeath")
 classNames = [class_map[class] for class in classes];
 displayConfMat(confMat, classNames);
-savefig("plots/confusionMatrixCategorical.png");
+savefig("plots/" * approachName * "/ensembleConfusionMatrix.png");
+
+estimators = [:KNN, :DTree, :SVM, :ANN]
+params = Vector{Dict}([bestKNNparams, bestDTreeParams, bestSVMparams, bestANNparams])
+
+# Best models
+for i = 1:length(estimators)
+    train = (trainInputs, trainTargets); test = (testInputs, testTargets);
+
+    local modelType = estimators[i]
+    hyperParams = params[i]
+    # normalization and validation set computation if needed
+    valRatio = if modelType != :ANN 0. else hyperParams["validationRatio"] end
+    train, val, test = prepareDataForFitting(train, test, valRatio)
+
+    classes = unique(trainTargets)
+    matAndMetrics = fitAndConfusion(modelType, hyperParams, train, val, test, classes)
+    confMat = matAndMetrics[8]
+
+    class_map = Dict(0 => "Recovery", 1 => "HomeDeath", 2 => "HospitalDeath")
+    classNames = [class_map[class] for class in classes]
+    displayConfMat(confMat, classNames)
+    savefig("plots/" * approachName * "/" * string(modelType) * "ConfusionMatrix.png");
+end;
 
 println("Done");
 

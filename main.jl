@@ -1,0 +1,8 @@
+println("Binary approach:")
+include("mainBin.jl")
+println("Binary approach with dimensionality reduction:")
+include("mainBinDimReduction.jl")
+println("Categorical approach:")
+include("mainCat.jl")
+println("Categorical approach with dimensionality reduction:")
+include("mainCatDimReduction.jl")
