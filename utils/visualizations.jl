@@ -8,8 +8,8 @@ end;
 
 # Function to plot the proportion of classes in target variable
 function pie_feature(dataset::DataFrame, feature::Symbol, labels::Vector{String}, title::String)
-    value_counts = combine(groupby(dataset, feature), nrow => :count)
-    values = value_counts.count   
+    value_counts = combine(groupby(dataset, feature), nrow => :count);
+    values = value_counts.count;   
     pie(labels, values, title="Proportion of deaths", autopct="%1.1f%%")
 end;
 
@@ -23,8 +23,7 @@ function plotCountDeaths(dataset::DataFrame, feature::Symbol, label::Matrix{Stri
     deaths = value_counts.sum_dead;
     deaths_hosp = value_counts.sum_hosp_dead;
     groupedbar(labels, [total deaths deaths_hosp], xlabel = feature, ylabel = "Count",
-        title = title,  bar_position = :stack,
-        label = label, legend = true)
+        title = title, label = label, legend = true)
 end;
 
 # Function to plot results from PCA with 2 components

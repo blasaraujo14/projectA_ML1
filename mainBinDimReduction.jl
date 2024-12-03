@@ -74,7 +74,7 @@ savefig("plots/correlations.png");
 # ----------------------
 pca = PCA(2);
 pcaInputs = fit_transform!(pca, numInputs);
-draw_results(pcaInputs, trainTargets; colors=[:green,:red], target_names=["Survived", "Died"]);
+draw_results(pcaInputs, trainTargets; colors=[:green,:red], target_names=["Died", "Survived"]);
 
 savefig("plots/pcaBinary.png");
 println("Done");
