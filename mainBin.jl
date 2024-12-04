@@ -112,7 +112,7 @@ ANNparams = [Dict("topology" => [2], "maxEpochs" => 500, "minLoss" => 0., "learn
 
 models = [(:ANN, ANNparams)];
 
-(modelType, params) = findBestModel(models, trainInputs, trainTargets, kFoldIndices; reduceDimensions=true);
+(modelType, params) = findBestModel(models, trainInputs, trainTargets, kFoldIndices; reduceDimensions=false);
 println("Best model is ", modelType, " with hyperparameters:");
 println(params);
 
