@@ -10,6 +10,11 @@ To obtain preprocessed dataset ("support2_cleaned"), please execute the followin
 Once obtained the cleaned dataset, to execute the binary and multiclass approaches, please
 execute the following command:
 
+- julia main.jl
+
+Which will execute the four apporaches one after the other. If one wishes to execute them
+manually, the following commands can be executed:
+
 - Binary: julia mainBin.jl
 - Binary with feature selection: julia mainBinDimReduction.jl
 - Categorical: julia mainCat.jl
